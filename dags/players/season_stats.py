@@ -5,34 +5,30 @@ from airflow.providers.standard.operators.python import PythonOperator
 
 from datetime import datetime
 from config.bucket import nba_bucket
-from games.games_scope import compute_games_scope_task
+from games.games_scope import get_game_id_in_scope
 from players import PLAYERS_METRICS
 
 
-def scan_players_game_stats() -> None:
+def scan_players_game_stats() -> pl.LazyFrame:
     """
     Scan the player game statistics CSV file from S3.
     """
-    lf = nba_bucket.scan_pyarrow_dataset(filepath="raw/playerstatistics.parquet")
 
-    # Save to temporary Parquet file to pass to next task
-    tmp_path = "/tmp/player_stats.parquet"
-
-    (
-        lf
-        .filter(pl.col("gameDate").str.to_datetime().dt.year() >= 2014)
-        .collect()
-        .write_parquet(tmp_path)
+    is_after_2014 = pl.col("gameDate").str.to_datetime().dt.year() >= 2014
+ 
+    return (
+        nba_bucket.scan_parquet(filepath="raw/playerstatistics.parquet")
+        .filter(is_after_2014)
     )
 
 
-def compute_season_stats() -> None:
+def compute_season_stats() -> str:
     """
     Get the players' season statistics by aggregating game stats.
     """
 
-    players_stats = pl.scan_parquet("/tmp/player_stats.parquet")
-    game_id_scope = pl.scan_parquet("/tmp/game_id_scope.parquet")
+    players_stats = scan_players_game_stats()
+    game_id_scope = get_game_id_in_scope()
 
     dimensions = ["season", "firstName", "lastName", "personId", "gameType"]
     number_of_games_played = pl.col("gameId").n_unique().alias("GP")
@@ -43,14 +39,23 @@ def compute_season_stats() -> None:
     ]
 
     season_stats = (
-        players_stats.join(
-            game_id_scope, how="inner", left_on="gameId", right_on="game_id"
+        players_stats
+        .join(
+            game_id_scope, 
+            how="inner", 
+            left_on="gameId", 
+            right_on="game_id"
         )
         .group_by(*dimensions)
-        .agg(number_of_games_played, *average_metrics)
+        .agg(
+            number_of_games_played, 
+            *average_metrics
+        )
     )
 
-    nba_bucket.sink_parquet_to_s3(season_stats, "player_season_stats.parquet")
+    output_path = nba_bucket.sink_parquet(season_stats, "player_season_stats.parquet")
+
+    return output_path
 
 
 with DAG(
@@ -58,15 +63,11 @@ with DAG(
     start_date=datetime(2023, 10, 1),
     catchup=False,
     tags=['nba']) as dag:
-    
-    scan_player_stats = PythonOperator(
-        task_id="load_players_stats",
-        python_callable=scan_players_game_stats
-    )
 
-    compute_player_season_stats = PythonOperator(
+
+    compute_player_season_stats_task = PythonOperator(
         task_id="compute_season_stats",
         python_callable=compute_season_stats
     )
 
-    [compute_games_scope_task, scan_player_stats] >> compute_player_season_stats
+    compute_player_season_stats_task

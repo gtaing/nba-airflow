@@ -28,7 +28,7 @@ class S3Bucket(object):
     def __repr__(self):
         return f"S3Bucket(bucket_name={self.bucket_name})"
 
-    def scan_pyarrow_dataset(self, filepath: str) -> LazyFrame:
+    def scan_parquet(self, filepath: str) -> LazyFrame:
         """
         Scan for Parquet files in the specified S3 bucket and prefix using PyArrow.
         """
@@ -48,21 +48,23 @@ class S3Bucket(object):
         return pl.scan_pyarrow_dataset(ds)
 
 
-    def sink_parquet_to_s3(
+    def sink_parquet(
         self, lf: LazyFrame, output_key: str, folder: str = "processed"
-    ) -> None:
+    ) -> str:
         """
         Write a Polars LazyFrame to S3 in Parquet format.
         """
 
         logger.info(f"Writing data to s3://{self.bucket_name}/{folder}/{output_key}")
 
-        with self.fs.open(f"s3://{self.bucket_name}/{folder}/{output_key}", "wb") as f:
-            lf.collect().write_parquet(
-                f, compression="snappy", storage_options=self.storage_options
-            )
+        output_path = f"s3://{self.bucket_name}/{folder}/{output_key}"
 
-        logger.info(f"Data written to s3://{self.bucket_name}/{output_key}")
+        with self.fs.open(output_path, "wb") as f:
+            lf.collect().write_parquet(f, compression="snappy", storage_options=self.storage_options)
+
+        logger.info(f"Data written to: {output_path}")
+
+        return output_path
 
 
 nba_bucket = S3Bucket()

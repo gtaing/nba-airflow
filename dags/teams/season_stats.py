@@ -88,9 +88,9 @@ def compute_team_season_stats(full_games: LazyFrame) -> LazyFrame:
         )
     )
 
-def get_team_season_stats() -> LazyFrame:
+def get_team_season_stats() -> str:
     
-    team_stats = nba_bucket.scan_pyarrow_dataset("raw/games_detail.parquet")
+    team_stats = nba_bucket.scan_parquet("raw/games_detail.parquet")
     game_id_scope = pl.scan_parquet("/tmp/game_id_scope.parquet")
 
     home_games = get_transformed_games(team_stats, "home")
@@ -99,7 +99,9 @@ def get_team_season_stats() -> LazyFrame:
 
     team_season_stats = compute_team_season_stats(full_games)
 
-    nba_bucket.sink_parquet_to_s3(team_season_stats, "team_season_stats.parquet")
+    output_path = nba_bucket.sink_parquet(team_season_stats, "team_season_stats.parquet")
+
+    return output_path
 
 
 with DAG(

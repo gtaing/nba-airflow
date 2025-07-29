@@ -8,9 +8,9 @@ def get_game_id_in_scope() -> pl.LazyFrame:
     """
     Get the game IDs for seasons starting from 2015.
     """
-    game_summary = nba_bucket.scan_pyarrow_dataset("raw/game_summary.parquet")
+    game_summary = nba_bucket.scan_parquet("raw/game_summary.parquet")
 
-    game_id_scope = (
+    return (
         game_summary
         .filter(pl.col("season") >= 2015)
         .select(
@@ -19,7 +19,6 @@ def get_game_id_in_scope() -> pl.LazyFrame:
         )
     )
 
-    return game_id_scope
 
 
 def save_game_id_scope_in_tmp() -> None:

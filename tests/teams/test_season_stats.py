@@ -125,11 +125,11 @@ def test_compute_team_season_stats(mock_team_metrics) -> None:
     
 
 
-def test_get_team_season_stats(mock_nba_bucket, monkeypatch, request):
+def test_get_team_season_stats(monkeypatch):
     # Mock scan_pyarrow_dataset and pl.scan_parquet to return small test data
     monkeypatch.setattr(
         season_stats.nba_bucket,
-        "scan_pyarrow_dataset",
+        "scan_parquet",
         lambda _: pl.LazyFrame({
             "game_id": [1, 2],
             "season_id": [2023, 2023],
@@ -177,12 +177,7 @@ def test_get_team_season_stats(mock_nba_bucket, monkeypatch, request):
     )
     monkeypatch.setattr(season_stats, "TEAM_METRICS", ["pts"])
 
-    # Run the function
-    get_team_season_stats()
-
-    # Check that the parquet file was written in the test-specific folder
-    test_name = request.node.name
-    output_path = os.path.join(TARGET_DIR, test_name, "team_season_stats.parquet")
+    output_path = get_team_season_stats()
 
     assert os.path.exists(output_path)
 
