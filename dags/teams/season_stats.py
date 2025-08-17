@@ -1,13 +1,8 @@
 import polars as pl
 
-from airflow import DAG
-from airflow.providers.standard.operators.python import PythonOperator
-from datetime import datetime
 from polars import LazyFrame
 from config.bucket import nba_bucket
-from games.games_scope import compute_games_scope_task
 from teams import TEAM_CONFIG_MAP, TEAM_METRICS
-
 
 
 def get_transformed_games(games_detail: LazyFrame, conf_type: str) -> LazyFrame:
@@ -88,6 +83,7 @@ def compute_team_season_stats(full_games: LazyFrame) -> LazyFrame:
         )
     )
 
+
 def get_team_season_stats() -> str:
     
     team_stats = nba_bucket.scan_parquet("raw/games_detail.parquet")
@@ -103,17 +99,3 @@ def get_team_season_stats() -> str:
 
     return output_path
 
-
-with DAG(
-    dag_id="team_season_stats",
-    start_date=datetime(2023, 10, 1),
-    catchup=False,
-    tags=['nba']) as dag:
-    
-    get_team_season_stats_task = PythonOperator(
-        task_id="get_team_season_stats",
-        python_callable=get_team_season_stats
-    )
-
-
-    compute_games_scope_task >> get_team_season_stats_task
