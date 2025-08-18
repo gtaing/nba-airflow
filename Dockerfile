@@ -21,3 +21,4 @@ RUN uv pip install -r pyproject.toml --no-cache-dir
 # Optional: Copy DAGs/plugins
 COPY ./dags ./dags
 COPY ./plugins ./plugins
+COPY ./include ./include

@@ -1,5 +1,6 @@
 import polars as pl
 
+from airflow.decorators import task
 from config.bucket import nba_bucket
 from games.games_scope import get_game_id_in_scope
 from players import PLAYERS_METRICS
@@ -51,6 +52,7 @@ def compute_player_season_stats(players_stats: LazyFrame,
     )
 
 
+@task
 def get_player_season_stats() -> str:
     """
     Get the players' season statistics by aggregating game stats.

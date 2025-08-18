@@ -52,7 +52,7 @@ def test_get_player_season_stats(monkeypatch):
     )
 
     # Run the function
-    output_path = get_player_season_stats()
+    output_path = get_player_season_stats.__wrapped__()
 
     result = pl.read_parquet(output_path)
 

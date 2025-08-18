@@ -127,10 +127,9 @@ def test_compute_team_season_stats(mock_team_metrics) -> None:
 
 def test_get_team_season_stats(monkeypatch):
     # Mock scan_pyarrow_dataset and pl.scan_parquet to return small test data
-    monkeypatch.setattr(
-        season_stats.nba_bucket,
-        "scan_parquet",
-        lambda _: pl.LazyFrame({
+
+    test_data = {
+        "raw/games_detail.parquet": pl.LazyFrame({
             "game_id": [1, 2],
             "season_id": [2023, 2023],
             "season_type": ["Regular Season", "Regular Season"],
@@ -140,8 +139,19 @@ def test_get_team_season_stats(monkeypatch):
             "team_name_home": ["Alpha", "Beta"],
             "pts_home": [100, 110],
             "pts_away": [90, 105],
+        }),
+        "raw/game_summary.parquet": pl.LazyFrame({
+            "game_id": [1, 2],
+            "season": [2023, 2023]
         })
+    }
+
+    # Patch pl.scan_parquet to return our test data
+    monkeypatch.setattr(
+        "config.bucket.nba_bucket.scan_parquet",
+        lambda filepath: test_data.get(filepath)
     )
+    
     monkeypatch.setattr(
         pl,
         "scan_parquet",
@@ -177,7 +187,7 @@ def test_get_team_season_stats(monkeypatch):
     )
     monkeypatch.setattr(season_stats, "TEAM_METRICS", ["pts"])
 
-    output_path = get_team_season_stats()
+    output_path = get_team_season_stats.__wrapped__()
 
     assert os.path.exists(output_path)
 

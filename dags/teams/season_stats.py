@@ -1,8 +1,10 @@
 import polars as pl
 
+from airflow.decorators import task
 from polars import LazyFrame
 from config.bucket import nba_bucket
 from teams import TEAM_CONFIG_MAP, TEAM_METRICS
+from games.games_scope import get_game_id_in_scope
 
 
 def get_transformed_games(games_detail: LazyFrame, conf_type: str) -> LazyFrame:
@@ -84,10 +86,11 @@ def compute_team_season_stats(full_games: LazyFrame) -> LazyFrame:
     )
 
 
+@task
 def get_team_season_stats() -> str:
     
     team_stats = nba_bucket.scan_parquet("raw/games_detail.parquet")
-    game_id_scope = pl.scan_parquet("/tmp/game_id_scope.parquet")
+    game_id_scope = get_game_id_in_scope()
 
     home_games = get_transformed_games(team_stats, "home")
     away_games = get_transformed_games(team_stats, "away")
