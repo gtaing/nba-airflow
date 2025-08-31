@@ -9,3 +9,13 @@ tests:
 clean-target:
 	@echo "Cleaning the /target folder..."
 	@rm -rf target/*
+
+.PHONY: check
+check:
+	@echo "Checking with Ruff..."
+	$(PYTHON_PATH) -m ruff check
+
+.PHONY: fix-format
+fix-format:
+	@echo "Fixing format issues with Ruff..."
+	$(PYTHON_PATH) -m ruff check --fix

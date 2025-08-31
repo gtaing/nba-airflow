@@ -3,17 +3,16 @@ import polars as pl
 from config.bucket import nba_bucket
 
 
-def get_game_id_in_scope() -> pl.LazyFrame:
+def get_game_id_season() -> pl.LazyFrame:
     """
     Get the game IDs for seasons starting from 2015.
     """
-    game_summary = nba_bucket.scan_parquet("raw/game_summary.parquet")
+    game_detail = nba_bucket.scan_parquet("raw/game_detail.parquet")
+    game_year = pl.col("game_date").str.to_datetime().dt.year()
 
     return (
-        game_summary
-        .filter(pl.col("season") >= 2015)
-        .select(
-            "season", 
-            "game_id"
-        )
+        game_detail
+        .with_columns(game_year.alias("year"))
+        .group_by("season_id", "game_id")
+        .agg(pl.max("year").alias("season"))
     )

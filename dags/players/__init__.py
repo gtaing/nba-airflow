@@ -1,5 +1,3 @@
-
-
 PLAYERS_METRICS = {
     "numMinutes": "MIN",
     "points": "PTS",

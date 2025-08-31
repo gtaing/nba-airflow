@@ -47,7 +47,6 @@ class S3Bucket(object):
 
         return pl.scan_pyarrow_dataset(ds)
 
-
     def sink_parquet(
         self, lf: LazyFrame, output_key: str, folder: str = "processed"
     ) -> str:
@@ -60,7 +59,9 @@ class S3Bucket(object):
         output_path = f"s3://{self.bucket_name}/{folder}/{output_key}"
 
         with self.fs.open(output_path, "wb") as f:
-            lf.collect().write_parquet(f, compression="snappy", storage_options=self.storage_options)
+            lf.collect().write_parquet(
+                f, compression="snappy", storage_options=self.storage_options
+            )
 
         logger.info(f"Data written to: {output_path}")
 
